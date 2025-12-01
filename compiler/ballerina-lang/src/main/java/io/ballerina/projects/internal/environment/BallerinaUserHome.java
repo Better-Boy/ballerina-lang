@@ -7,19 +7,23 @@ import io.ballerina.projects.environment.Environment;
 import io.ballerina.projects.internal.SettingsBuilder;
 import io.ballerina.projects.internal.model.Repository;
 import io.ballerina.projects.internal.repositories.CustomPkgRepositoryContainer;
+import io.ballerina.projects.internal.repositories.FileSystemRepository;
 import io.ballerina.projects.internal.repositories.LocalPackageRepository;
 import io.ballerina.projects.internal.repositories.MavenPackageRepository;
 import io.ballerina.projects.internal.repositories.RemotePackageRepository;
 import io.ballerina.projects.util.ProjectConstants;
+import org.wso2.ballerinalang.compiler.util.ProjectDirConstants;
 import org.wso2.ballerinalang.util.RepoUtils;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
+import static io.ballerina.projects.internal.SettingsBuilder.MAVEN;
 import static io.ballerina.runtime.api.constants.RuntimeConstants.USER_HOME;
 
 /**
@@ -32,7 +36,8 @@ public final class BallerinaUserHome {
     private final Path ballerinaUserHomeDirPath;
     private final RemotePackageRepository remotePackageRepository;
     private final LocalPackageRepository localPackageRepository;
-    private final Map<String, MavenPackageRepository> mavenCustomRepositories;
+    private Map<String, MavenPackageRepository> mavenCustomRepositories;
+    private Map<String, FileSystemRepository> customFSRepositories;
 
     private BallerinaUserHome(Environment environment, Path ballerinaUserHomeDirPath) {
         this.ballerinaUserHomeDirPath = ballerinaUserHomeDirPath;
@@ -51,27 +56,48 @@ public final class BallerinaUserHome {
         this.remotePackageRepository = RemotePackageRepository
                 .from(environment, remotePackageRepositoryPath, readSettings());
         this.localPackageRepository = createLocalRepository(environment);
-        this.mavenCustomRepositories = createMavenCustomRepositories(environment);
+        createCustomRepositories(environment);
     }
 
-    private Map<String, MavenPackageRepository> createMavenCustomRepositories(Environment environment) {
-        Map<String, MavenPackageRepository> customRepositories = new HashMap<>();
+    private void createCustomRepositories(Environment environment) {
+        mavenCustomRepositories = new HashMap<>();
+        customFSRepositories = new HashMap<>();
         Repository[] repositories = readSettings().getRepositories();
         for (Repository repository : repositories) {
-            Path repositoryPath = ballerinaUserHomeDirPath.resolve(ProjectConstants.REPOSITORIES_DIR)
-                    .resolve(repository.id());
+            if (MAVEN.equals(repository.type())) {
+                Path repositoryPath = ballerinaUserHomeDirPath.resolve(ProjectConstants.REPOSITORIES_DIR)
+                        .resolve(repository.id());
+                try {
+                    Files.createDirectories(repositoryPath);
+                } catch (IOException exception) {
+                    throw new ProjectException("unable to create repository: " +
+                            ProjectConstants.LOCAL_REPOSITORY_NAME);
+                }
+
+                if (!mavenCustomRepositories.containsKey(repository.id())) {
+                    mavenCustomRepositories.put(repository.id(), MavenPackageRepository.from(
+                            environment, repositoryPath, repository));
+                }
+                continue;
+            }
+            Path repositoryPath;
+            if (repository.path().isPresent()) {
+                repositoryPath = repository.path().get();
+            } else {
+                repositoryPath = ballerinaUserHomeDirPath.resolve(ProjectConstants.REPOSITORIES_DIR)
+                        .resolve(repository.id());
+            }
             try {
                 Files.createDirectories(repositoryPath);
             } catch (IOException exception) {
-                throw new ProjectException("unable to create repository: " + ProjectConstants.LOCAL_REPOSITORY_NAME);
+                throw new ProjectException("unable to create repository: " + repositoryPath);
             }
 
-            if (!customRepositories.containsKey(repository.id())) {
-                customRepositories.put(repository.id(), MavenPackageRepository.from(environment, repositoryPath,
-                        repository));
+            if (!customFSRepositories.containsKey(repository.id())) {
+                customFSRepositories.put(repository.id(), new FileSystemRepository(environment, repositoryPath,
+                        RepoUtils.getBallerinaVersion()));
             }
         }
-        return customRepositories;
     }
 
     public static BallerinaUserHome from(Environment environment, Path ballerinaUserHomeDirPath) {
@@ -80,12 +106,17 @@ public final class BallerinaUserHome {
     }
 
     public static BallerinaUserHome from(Environment environment) {
-        String userHomeDir = System.getProperty(USER_HOME);
-        if (userHomeDir == null || userHomeDir.isEmpty()) {
-            throw new ProjectException("unable to get user home directory");
+        String homeRepoDir = System.getenv(ProjectDirConstants.HOME_REPO_ENV_KEY);
+        Path homeRepoPath;
+        if (homeRepoDir == null || homeRepoDir.isEmpty()) {
+            String userHomeDir = System.getProperty(USER_HOME);
+            if (userHomeDir == null || userHomeDir.isEmpty()) {
+                throw new ProjectException("unable to get user home directory");
+            }
+            homeRepoPath = Path.of(userHomeDir, ProjectConstants.HOME_REPO_DEFAULT_DIRNAME);
+        } else {
+            homeRepoPath = Paths.get(homeRepoDir);
         }
-
-        Path homeRepoPath = Path.of(userHomeDir, ProjectConstants.HOME_REPO_DEFAULT_DIRNAME);
         return from(environment, homeRepoPath);
     }
 
@@ -95,6 +126,10 @@ public final class BallerinaUserHome {
 
     public Map<String, MavenPackageRepository> customRepositories() {
         return this.mavenCustomRepositories;
+    }
+
+    public Map<String, FileSystemRepository> customFSRepositories() {
+        return this.customFSRepositories;
     }
 
     public CustomPkgRepositoryContainer customPkgRepositoryContainer() {
