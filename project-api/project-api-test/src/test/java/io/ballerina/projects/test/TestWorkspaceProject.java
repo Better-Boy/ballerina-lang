@@ -163,7 +163,7 @@ public class TestWorkspaceProject extends BaseTest {
         }
 
         // Verify that the dependencies of depA contains dep.b
-       depAPackage.getResolution().dependencyGraph().toTopologicallySortedList()
+        depAPackage.getResolution().dependencyGraph().toTopologicallySortedList()
                 .stream().filter(packageDependency -> packageDependency.packageInstance().descriptor().toString()
                         .equals("testorg/dep.b:0.1.0")).findFirst()
                 .orElseThrow(() -> new AssertionError("dep.b not found in the dependencies of depA"));

@@ -113,6 +113,7 @@ public class WorkspaceRepository extends AbstractPackageRepository {
                     break;
                 }
             }
+            return moduleDescriptors;
         }
         for (BuildProject buildProject : this.workspaceProject.projects()) {
             if (buildProject.currentPackage().descriptor().equals(PackageDescriptor.from(org, name, version))) {
