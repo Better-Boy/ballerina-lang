@@ -65,6 +65,7 @@ public class CreateFingerprintTask implements Task {
             createFingerPrintForArtifacts(project, buildJson, isTestExecution, skipExecutable);
             createFingerPrintForSettingsToml(buildJson);
             createFingerPrintForBallerinaToml(buildJson, project);
+            createFingerPrintForCloudToml(buildJson, project);
             writeBuildFile(buildFilePath, buildJson);
         } catch (JsonSyntaxException | IOException | NoSuchAlgorithmException e) {
             // ignore
@@ -76,6 +77,16 @@ public class CreateFingerprintTask implements Task {
         File ballerinaTomlFile = project.sourceRoot().resolve(ProjectConstants.BALLERINA_TOML).toFile();
         BuildJson.FileMetaInfo ballerinaTomlMetaInfo = getFileMetaInfo(ballerinaTomlFile);
         buildJson.setBallerinaTomlMetaInfo(ballerinaTomlMetaInfo);
+    }
+
+    private void createFingerPrintForCloudToml(BuildJson buildJson, Project project) throws
+            IOException, NoSuchAlgorithmException {
+        File cloudTomlFile = project.sourceRoot().resolve(ProjectConstants.CLOUD_TOML).toFile();
+        if (!cloudTomlFile.exists()) {
+            return;
+        }
+        BuildJson.FileMetaInfo cloudTomlMetaInfo = getFileMetaInfo(cloudTomlFile);
+        buildJson.setCloudTomlMetaInfo(cloudTomlMetaInfo);
     }
 
     private static void createFingerPrintForProjectFiles(Project project, BuildJson buildJson, boolean isTestExecution)

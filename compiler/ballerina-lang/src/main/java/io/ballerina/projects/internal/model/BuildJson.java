@@ -75,6 +75,10 @@ public class BuildJson {
     @SerializedName(BALLERINA_TOML_META_INFO)
     private FileMetaInfo ballerinaTomlMetaInfo;
 
+    public static final String CLOUD_TOML_META_INFO = "cloud_toml_meta_info";
+    @SerializedName(CLOUD_TOML_META_INFO)
+    private FileMetaInfo cloudTomlMetaInfo;
+
     public static final String TEST_ARTIFACT_META_INFO = "test_artifact_meta_info";
     @SerializedName(TEST_ARTIFACT_META_INFO)
     private FileMetaInfo[] testArtifactMetaInfo;
@@ -217,6 +221,14 @@ public class BuildJson {
 
     public void setTestClassPath(String testClassPath) {
         this.testClassPath = testClassPath;
+    }
+
+    public void setCloudTomlMetaInfo(FileMetaInfo cloudTomlMetaInfo) {
+        this.cloudTomlMetaInfo = cloudTomlMetaInfo;
+    }
+
+    public FileMetaInfo getCloudTomlMetaInfo() {
+        return cloudTomlMetaInfo;
     }
 
     public static class FileMetaInfo {

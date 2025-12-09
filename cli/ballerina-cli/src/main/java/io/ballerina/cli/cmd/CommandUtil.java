@@ -102,6 +102,7 @@ import static io.ballerina.projects.util.ProjectConstants.BALLERINA_TOML;
 import static io.ballerina.projects.util.ProjectConstants.BAL_TOOL_JSON;
 import static io.ballerina.projects.util.ProjectConstants.BAL_TOOL_TOML;
 import static io.ballerina.projects.util.ProjectConstants.BLANG_SOURCE_EXT;
+import static io.ballerina.projects.util.ProjectConstants.CLOUD_TOML;
 import static io.ballerina.projects.util.ProjectConstants.DEPENDENCIES_TOML;
 import static io.ballerina.projects.util.ProjectConstants.DEPENDENCY_GRAPH_JSON;
 import static io.ballerina.projects.util.ProjectConstants.EXEC_BACKUP_DIR_NAME;
@@ -1340,7 +1341,11 @@ public final class CommandUtil {
         if (isSettingsFileModified(buildJson)) {
             return true;
         }
-        if (isBallerinaTomlFileModified(buildJson, project)) {
+        if (isTomlFileModified(buildJson.getBallerinaTomlMetaInfo(),
+                project.sourceRoot().resolve(BALLERINA_TOML).toFile())) {
+            return true;
+        }
+        if (isTomlFileModified(buildJson.getCloudTomlMetaInfo(), project.sourceRoot().resolve(CLOUD_TOML).toFile())) {
             return true;
         }
         if (isTestExecution) {
@@ -1366,21 +1371,20 @@ public final class CommandUtil {
         return projectDependencyGraph;
     }
 
-    private static boolean isBallerinaTomlFileModified(BuildJson buildJson, Project project)  {
+    private static boolean isTomlFileModified(BuildJson.FileMetaInfo tomlFileMetaInfo, File tomlFile)  {
+        if (tomlFileMetaInfo == null) {
+            // No Cloud.toml in the project
+            return tomlFile.exists();
+        }
         try {
-            File ballerinaTomlFile = project.sourceRoot().resolve(BALLERINA_TOML).toFile();
-            if (ballerinaTomlFile.exists() && ballerinaTomlFile.isFile()) {
-                long lastModified = ballerinaTomlFile.lastModified();
-                long size = Files.size(ballerinaTomlFile.toPath());
-                BuildJson.FileMetaInfo ballerinaTomlFileMetaInfo = buildJson.getBallerinaTomlMetaInfo();
-                if (ballerinaTomlFileMetaInfo == null) {
-                    return true;
-                }
-                if (ballerinaTomlFileMetaInfo.getSize() == size &&
-                        ballerinaTomlFileMetaInfo.getLastModifiedTime() == lastModified) {
+            if (tomlFile.exists() && tomlFile.isFile()) {
+                long lastModified = tomlFile.lastModified();
+                long size = Files.size(tomlFile.toPath());
+                if (tomlFileMetaInfo.getSize() == size &&
+                        tomlFileMetaInfo.getLastModifiedTime() == lastModified) {
                     return false;
                 }
-                return !getSHA256Digest(ballerinaTomlFile).equals(ballerinaTomlFileMetaInfo.getHash());
+                return !getSHA256Digest(tomlFile).equals(tomlFileMetaInfo.getHash());
             }
             return true;
         } catch (IOException | NoSuchAlgorithmException e) {
