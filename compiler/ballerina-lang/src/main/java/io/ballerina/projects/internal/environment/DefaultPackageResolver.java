@@ -91,9 +91,13 @@ public class DefaultPackageResolver implements PackageResolver {
         // We will only receive hierarchical imports in requests
         Collection<ImportModuleResponse> responseListInDist = distributionRepo.getPackageNames(requests, options);
         Collection<ImportModuleResponse> responseListInCentral = centralRepo.getPackageNames(requests, options);
+        Collection<ImportModuleResponse> responseListInWorkspace = new ArrayList<>();
+        if (workspaceRepo != null) {
+            responseListInWorkspace.addAll(workspaceRepo.getPackageNames(requests, options));
+        }
 
         return new ArrayList<>(
-                Stream.of(responseListInDist, responseListInCentral)
+                Stream.of(responseListInWorkspace, responseListInDist, responseListInCentral)
                         .flatMap(Collection::stream).collect(Collectors.toMap(
                         ImportModuleResponse::importModuleRequest, Function.identity(),
                         (ImportModuleResponse x, ImportModuleResponse y) -> {
