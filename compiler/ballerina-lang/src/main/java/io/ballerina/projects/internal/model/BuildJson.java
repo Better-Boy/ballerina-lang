@@ -231,28 +231,28 @@ public class BuildJson {
         this.testClassPath = testClassPath;
     }
 
-    public void setCloudTomlMetaInfo(FileMetaInfo cloudTomlMetaInfo) {
-        this.cloudTomlMetaInfo = cloudTomlMetaInfo;
-    }
-
     public FileMetaInfo getCloudTomlMetaInfo() {
         return cloudTomlMetaInfo;
     }
 
-    public void setResourcesMetaInfo(FileMetaInfo[] resourcesDirMetaInfo) {
-        this.resourcesDirMetaInfo = resourcesDirMetaInfo;
+    public void setCloudTomlMetaInfo(FileMetaInfo cloudTomlMetaInfo) {
+        this.cloudTomlMetaInfo = cloudTomlMetaInfo;
     }
 
     public FileMetaInfo[] getResourcesMetaInfo() {
         return resourcesDirMetaInfo;
     }
 
-    public void setGeneratedMetaInfo(FileMetaInfo[] generatedDirMetaInfo) {
-        this.generatedDirMetaInfo = generatedDirMetaInfo;
+    public void setResourcesMetaInfo(FileMetaInfo[] resourcesDirMetaInfo) {
+        this.resourcesDirMetaInfo = resourcesDirMetaInfo;
     }
 
     public FileMetaInfo[] getGeneratedMetaInfo() {
         return generatedDirMetaInfo;
+    }
+
+    public void setGeneratedMetaInfo(FileMetaInfo[] generatedDirMetaInfo) {
+        this.generatedDirMetaInfo = generatedDirMetaInfo;
     }
 
     public static class FileMetaInfo {

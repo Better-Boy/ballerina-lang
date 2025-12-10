@@ -118,6 +118,8 @@ public class CreateFingerprintTask implements Task {
                     resourcesMetaInfoList.add(getFileMetaInfo(file));
                 }
                 buildJson.setResourcesMetaInfo(resourcesMetaInfoList.toArray(new BuildJson.FileMetaInfo[0]));
+            } else {
+                buildJson.setResourcesMetaInfo(null);
             }
         } else {
             buildJson.setResourcesMetaInfo(null);
@@ -132,6 +134,8 @@ public class CreateFingerprintTask implements Task {
                     generatedMetaInfoList.add(getFileMetaInfo(file));
                 }
                 buildJson.setGeneratedMetaInfo(generatedMetaInfoList.toArray(new BuildJson.FileMetaInfo[0]));
+            } else {
+                buildJson.setGeneratedMetaInfo(null);
             }
         } else {
             buildJson.setGeneratedMetaInfo(null);
@@ -183,9 +187,6 @@ public class CreateFingerprintTask implements Task {
         fileMetaInfo.setFile(file.getAbsolutePath());
         fileMetaInfo.setLastModifiedTime(Files.getLastModifiedTime(file.toPath()).toMillis());
         fileMetaInfo.setSize(Files.size(file.toPath()));
-        if (file.isDirectory()) {
-            return fileMetaInfo;
-        }
         fileMetaInfo.setHash(getSHA256Digest(file));
         return fileMetaInfo;
     }
