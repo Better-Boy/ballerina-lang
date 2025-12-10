@@ -106,9 +106,11 @@ import static io.ballerina.projects.util.ProjectConstants.CLOUD_TOML;
 import static io.ballerina.projects.util.ProjectConstants.DEPENDENCIES_TOML;
 import static io.ballerina.projects.util.ProjectConstants.DEPENDENCY_GRAPH_JSON;
 import static io.ballerina.projects.util.ProjectConstants.EXEC_BACKUP_DIR_NAME;
+import static io.ballerina.projects.util.ProjectConstants.GENERATED_MODULES_ROOT;
 import static io.ballerina.projects.util.ProjectConstants.LIB_DIR;
 import static io.ballerina.projects.util.ProjectConstants.MODULES_ROOT;
 import static io.ballerina.projects.util.ProjectConstants.PACKAGE_JSON;
+import static io.ballerina.projects.util.ProjectConstants.RESOURCE_DIR_NAME;
 import static io.ballerina.projects.util.ProjectConstants.SETTINGS_FILE_NAME;
 import static io.ballerina.projects.util.ProjectConstants.TEST_DIR_NAME;
 import static io.ballerina.projects.util.ProjectConstants.TOOL_DIR;
@@ -1331,13 +1333,35 @@ public final class CommandUtil {
                                                         boolean skipExecutable) throws IOException {
         List<File> srcFilesToEvaluate = getSrcFiles(project);
         List<File> testSrcFilesToEvaluate = getTestSrcFiles(project);
-        if (isProjectFilesModified(buildJson.getSrcMetaInfo(), srcFilesToEvaluate, project)) {
+
+        if (isProjectFilesModified(buildJson.getSrcMetaInfo(), srcFilesToEvaluate)) {
             return true;
         }
-        if (isTestExecution && isProjectFilesModified(buildJson.getTestSrcMetaInfo(), testSrcFilesToEvaluate,
-                project)) {
+        if (isTestExecution && isProjectFilesModified(buildJson.getTestSrcMetaInfo(), testSrcFilesToEvaluate)) {
             return true;
         }
+        Path resourcesPath = project.sourceRoot().resolve(RESOURCE_DIR_NAME);
+        if (Files.exists(resourcesPath)) {
+            List<File> filesInResourcesDir = getFilesInDir(resourcesPath);
+            if (isProjectFilesModified(buildJson.getResourcesMetaInfo(), filesInResourcesDir)) {
+                return true;
+            }
+        } else if (buildJson.getResourcesMetaInfo() != null) {
+            // resources/ directory existed in the previous build but not in the current build.
+            return true;
+        }
+
+        Path generatedPath = project.sourceRoot().resolve(GENERATED_MODULES_ROOT);
+        if (Files.exists(generatedPath)) {
+            List<File> filesInGeneratedDir = getFilesInDir(generatedPath);
+            if (isProjectFilesModified(buildJson.getGeneratedMetaInfo(), filesInGeneratedDir)) {
+                return true;
+            }
+        } else if (buildJson.getGeneratedMetaInfo() != null) {
+            // generated/ directory existed in the previous build but not in the current build.
+            return true;
+        }
+
         if (isSettingsFileModified(buildJson)) {
             return true;
         }
@@ -1357,6 +1381,15 @@ public final class CommandUtil {
         return isExecutableModified(buildJson, project);
     }
 
+    public static List<File> getFilesInDir(Path dirPath) throws IOException {
+        try (var paths = Files.walk(dirPath)) {
+            return paths
+                    .filter(Files::isRegularFile)
+                    .map(Path::toFile)
+                    .toList();
+        }
+    }
+
     public static DependencyGraph<BuildProject> resolveWorkspaceDependencies(
             WorkspaceProject workspaceProject, PrintStream outStream) {
         outStream.println("Resolving workspace dependencies");
@@ -1373,7 +1406,7 @@ public final class CommandUtil {
 
     private static boolean isTomlFileModified(BuildJson.FileMetaInfo tomlFileMetaInfo, File tomlFile)  {
         if (tomlFileMetaInfo == null) {
-            // No Cloud.toml in the project
+            // No metadata exists for this TOML file (file was not tracked in the previous build)
             return tomlFile.exists();
         }
         try {
@@ -1440,9 +1473,10 @@ public final class CommandUtil {
         return false;
     }
 
-    private static boolean isProjectFilesModified(BuildJson.FileMetaInfo[] fileMetaInfos, List<File> filesToEvaluate,
-                                                  Project project) {
-        if (fileMetaInfos == null || filesToEvaluate.size() != fileMetaInfos.length) {
+    private static boolean isProjectFilesModified(BuildJson.FileMetaInfo[] fileMetaInfos, List<File> filesToEvaluate) {
+        if (fileMetaInfos == null) {
+            return !filesToEvaluate.isEmpty();
+        } else if (filesToEvaluate.size() != fileMetaInfos.length) {
             return true;
         }
         for (BuildJson.FileMetaInfo fileMetaInfo : fileMetaInfos) {

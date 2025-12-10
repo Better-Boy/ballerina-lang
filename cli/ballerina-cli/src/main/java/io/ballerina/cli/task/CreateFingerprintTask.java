@@ -39,6 +39,8 @@ import java.util.List;
 import static io.ballerina.cli.cmd.CommandUtil.getSHA256Digest;
 import static io.ballerina.projects.util.ProjectConstants.BUILD_FILE;
 import static io.ballerina.projects.util.ProjectConstants.EXEC_BACKUP_DIR_NAME;
+import static io.ballerina.projects.util.ProjectConstants.GENERATED_MODULES_ROOT;
+import static io.ballerina.projects.util.ProjectConstants.RESOURCE_DIR_NAME;
 import static io.ballerina.projects.util.ProjectUtils.readBuildJson;
 
 
@@ -72,6 +74,7 @@ public class CreateFingerprintTask implements Task {
         }
     }
 
+
     private void createFingerPrintForBallerinaToml(BuildJson buildJson, Project project) throws
             IOException, NoSuchAlgorithmException {
         File ballerinaTomlFile = project.sourceRoot().resolve(ProjectConstants.BALLERINA_TOML).toFile();
@@ -83,6 +86,7 @@ public class CreateFingerprintTask implements Task {
             IOException, NoSuchAlgorithmException {
         File cloudTomlFile = project.sourceRoot().resolve(ProjectConstants.CLOUD_TOML).toFile();
         if (!cloudTomlFile.exists()) {
+            buildJson.setCloudTomlMetaInfo(null);
             return;
         }
         BuildJson.FileMetaInfo cloudTomlMetaInfo = getFileMetaInfo(cloudTomlFile);
@@ -104,6 +108,33 @@ public class CreateFingerprintTask implements Task {
                 testSrcMetaInfoList.add(getFileMetaInfo(fileToEvaluate));
             }
             buildJson.setTestSrcMetaInfo(testSrcMetaInfoList.toArray(new BuildJson.FileMetaInfo[0]));
+        }
+        List<BuildJson.FileMetaInfo> resourcesMetaInfoList = new ArrayList<>();
+        Path resourcesPath = project.sourceRoot().resolve(RESOURCE_DIR_NAME);
+        if (Files.exists(resourcesPath)) {
+            List<File> filesInDir = CommandUtil.getFilesInDir(resourcesPath);
+            if (!filesInDir.isEmpty()) {
+                for (File file : filesInDir) {
+                    resourcesMetaInfoList.add(getFileMetaInfo(file));
+                }
+                buildJson.setResourcesMetaInfo(resourcesMetaInfoList.toArray(new BuildJson.FileMetaInfo[0]));
+            }
+        } else {
+            buildJson.setResourcesMetaInfo(null);
+        }
+
+        List<BuildJson.FileMetaInfo> generatedMetaInfoList = new ArrayList<>();
+        Path generatedDirPath = project.sourceRoot().resolve(GENERATED_MODULES_ROOT);
+        if (Files.exists(generatedDirPath)) {
+            List<File> filesInDir = CommandUtil.getFilesInDir(generatedDirPath);
+            if (!filesInDir.isEmpty()) {
+                for (File file : filesInDir) {
+                    generatedMetaInfoList.add(getFileMetaInfo(file));
+                }
+                buildJson.setGeneratedMetaInfo(generatedMetaInfoList.toArray(new BuildJson.FileMetaInfo[0]));
+            }
+        } else {
+            buildJson.setGeneratedMetaInfo(null);
         }
     }
 
@@ -147,13 +178,16 @@ public class CreateFingerprintTask implements Task {
         }
     }
 
-    private static BuildJson.FileMetaInfo getFileMetaInfo(File execFile) throws IOException, NoSuchAlgorithmException {
-        BuildJson.FileMetaInfo execMetaInfo = new BuildJson.FileMetaInfo();
-        execMetaInfo.setFile(execFile.getAbsolutePath());
-        execMetaInfo.setLastModifiedTime(Files.getLastModifiedTime(execFile.toPath()).toMillis());
-        execMetaInfo.setSize(Files.size(execFile.toPath()));
-        execMetaInfo.setHash(getSHA256Digest(execFile));
-        return execMetaInfo;
+    private static BuildJson.FileMetaInfo getFileMetaInfo(File file) throws IOException, NoSuchAlgorithmException {
+        BuildJson.FileMetaInfo fileMetaInfo = new BuildJson.FileMetaInfo();
+        fileMetaInfo.setFile(file.getAbsolutePath());
+        fileMetaInfo.setLastModifiedTime(Files.getLastModifiedTime(file.toPath()).toMillis());
+        fileMetaInfo.setSize(Files.size(file.toPath()));
+        if (file.isDirectory()) {
+            return fileMetaInfo;
+        }
+        fileMetaInfo.setHash(getSHA256Digest(file));
+        return fileMetaInfo;
     }
 
     private static void writeBuildFile(Path buildFilePath, BuildJson buildJson) {

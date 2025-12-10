@@ -79,6 +79,14 @@ public class BuildJson {
     @SerializedName(CLOUD_TOML_META_INFO)
     private FileMetaInfo cloudTomlMetaInfo;
 
+    public static final String RESOURCES_DIR_META_INFO = "resources_dir_meta_info";
+    @SerializedName(RESOURCES_DIR_META_INFO)
+    private FileMetaInfo[] resourcesDirMetaInfo;
+
+    public static final String GENERATED_DIR_META_INFO = "generated_dir_meta_info";
+    @SerializedName(GENERATED_DIR_META_INFO)
+    private FileMetaInfo[] generatedDirMetaInfo;
+
     public static final String TEST_ARTIFACT_META_INFO = "test_artifact_meta_info";
     @SerializedName(TEST_ARTIFACT_META_INFO)
     private FileMetaInfo[] testArtifactMetaInfo;
@@ -229,6 +237,22 @@ public class BuildJson {
 
     public FileMetaInfo getCloudTomlMetaInfo() {
         return cloudTomlMetaInfo;
+    }
+
+    public void setResourcesMetaInfo(FileMetaInfo[] resourcesDirMetaInfo) {
+        this.resourcesDirMetaInfo = resourcesDirMetaInfo;
+    }
+
+    public FileMetaInfo[] getResourcesMetaInfo() {
+        return resourcesDirMetaInfo;
+    }
+
+    public void setGeneratedMetaInfo(FileMetaInfo[] generatedDirMetaInfo) {
+        this.generatedDirMetaInfo = generatedDirMetaInfo;
+    }
+
+    public FileMetaInfo[] getGeneratedMetaInfo() {
+        return generatedDirMetaInfo;
     }
 
     public static class FileMetaInfo {
