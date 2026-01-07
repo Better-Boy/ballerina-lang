@@ -104,7 +104,7 @@ public class MavenPackageRepositoryTests {
     public void testIsPackageExist() throws IOException {
         boolean isPackageExists = customPackageRepository.isPackageExists(
                 PackageOrg.from("luheerathan"), PackageName.from("pact"),
-                PackageVersion.from("0.1.0"), false);
+                PackageVersion.from("0.1.0"));
         Assert.assertTrue(isPackageExists);
         deleteRemotePackage();
     }
@@ -113,7 +113,7 @@ public class MavenPackageRepositoryTests {
     public void testIsPackageExistOffline() throws IOException {
         boolean isPackageExists = customPackageRepository.isPackageExists(
                 PackageOrg.from("luheerathan"), PackageName.from("pact"),
-                PackageVersion.from("0.1.0"), true);
+                PackageVersion.from("0.1.0"));
         Assert.assertFalse(isPackageExists);
         deleteRemotePackage();
     }
@@ -122,7 +122,7 @@ public class MavenPackageRepositoryTests {
     public void testNonExistingPkg()  {
         boolean isPackageExists = customPackageRepository.isPackageExists(
                 PackageOrg.from("luheerathan"),
-                PackageName.from("pact1"), PackageVersion.from("0.1.0"), false);
+                PackageName.from("pact1"), PackageVersion.from("0.1.0"));
         Assert.assertTrue(!isPackageExists);
     }
 
@@ -130,7 +130,7 @@ public class MavenPackageRepositoryTests {
     public void testGetPackageVersionsOnline() throws IOException {
         customPackageRepository.isPackageExists(
                 PackageOrg.from("luheerathan"), PackageName.from("pact"),
-                PackageVersion.from("0.1.0"), false);
+                PackageVersion.from("0.1.0"));
         ResolutionRequest resolutionRequest = ResolutionRequest.from(
                 PackageDescriptor.from(PackageOrg.from("luheerathan"),
                         PackageName.from("pact"), PackageVersion.from("0.1.0")),
