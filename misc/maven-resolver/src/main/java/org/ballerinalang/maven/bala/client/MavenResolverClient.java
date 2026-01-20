@@ -148,7 +148,7 @@ public class MavenResolverClient {
             MavenResolverClientException {
         LocalRepository localRepo = new LocalRepository(localRepoPath.toAbsolutePath().toString());
         session.setLocalRepositoryManager(system.newLocalRepositoryManager(session, localRepo));
-        session.setOffline(false); // TODO: handle offline build
+        session.setOffline(false);
         session.setUpdatePolicy(RepositoryPolicy.UPDATE_POLICY_ALWAYS);
 
         Artifact artifact = new DefaultArtifact(groupId, artifactId, BALA_EXTENSION, "[0,)");

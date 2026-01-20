@@ -42,9 +42,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -88,7 +90,7 @@ public class DefaultPackageResolver implements PackageResolver {
     @Override
     public Collection<ImportModuleResponse> resolvePackageNames(Collection<ImportModuleRequest> requests,
                                                                 ResolutionOptions options) {
-        List<ImportModuleRequest> unresolvedRequests = new ArrayList<>(requests);
+        Set<ImportModuleRequest> unresolvedRequests = new HashSet<>(requests);
 
         // We will only receive hierarchical imports in requests
         Collection<ImportModuleResponse> responseListInWorkspace = new ArrayList<>();
@@ -127,7 +129,7 @@ public class DefaultPackageResolver implements PackageResolver {
             unresolvedRequests = responseListInCustomRepos.stream()
                     .filter(r -> r.resolutionStatus().equals(ResolutionStatus.UNRESOLVED))
                     .map(ImportModuleResponse::importModuleRequest)
-                    .toList();
+                    .collect(Collectors.toSet());
         }
 
         Collection<ImportModuleResponse> responseListInDist = distributionRepo
