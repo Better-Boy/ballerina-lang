@@ -152,16 +152,14 @@ public class MavenPackageRepository implements PackageRepository {
         Set<PackageVersion> packageVersions = new HashSet<>(fileSystemRepo.getPackageVersions(request, options));
 
         // If the resolution request specifies to resolve offline, we return the local version
-        if (options.offline()) {
-            return new ArrayList<>(packageVersions);
-        }
-
-        try {
-            List<String> remotePackageVersions = this.client.getPackageVersions(orgName, packageName,
-                    Paths.get(repoLocation));
-            remotePackageVersions.stream().map(PackageVersion::from).forEach(packageVersions::add);
-        } catch (MavenResolverClientException e) {
-            // ignore and return the list from the FS cache location
+        if (!options.offline()) {
+            try {
+                List<String> remotePackageVersions = this.client.getPackageVersions(orgName, packageName,
+                        Paths.get(repoLocation));
+                remotePackageVersions.stream().map(PackageVersion::from).forEach(packageVersions::add);
+            } catch (MavenResolverClientException e) {
+                // ignore and return the list from the FS cache location
+            }
         }
         SemanticVersion minSemVer = null;
         PackageVersion packageVersion = request.version().orElse(null);

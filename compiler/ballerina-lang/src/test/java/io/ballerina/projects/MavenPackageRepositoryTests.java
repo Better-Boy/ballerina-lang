@@ -97,7 +97,7 @@ public class MavenPackageRepositoryTests {
         }, TEST_REPO, "1.2.3");
     }
 
-    @Test(description = "Test package existence in custom repository - online")
+    @Test(description = "Test package existence in custom repository")
     public void testIsPackageExist() {
         boolean isPackageExists = customPackageRepository.isPackageExists(
                 PackageOrg.from("testorg"), PackageName.from("packA"),
@@ -127,7 +127,6 @@ public class MavenPackageRepositoryTests {
         Assert.assertEquals(versions.size(), 1);
         Assert.assertTrue(versions.contains(PackageVersion.from("0.1.0")));
     }
-
 
     @Test(description = "Test getPackage (non existing package) in custom repository - offline")
     public void testGetPackageNonExistingOffline() {
@@ -190,7 +189,7 @@ public class MavenPackageRepositoryTests {
                 PackageDependencyScope.DEFAULT);
         Collection<PackageVersion> versions = customPackageRepository.getPackageVersions(resolutionRequest,
                 ResolutionOptions.builder().setOffline(true).build());
-        Assert.assertEquals(versions.size(), 1);
+        Assert.assertEquals(versions.size(), 0);
         Assert.assertFalse(versions.contains(PackageVersion.from("0.2.0")));
     }
 
@@ -201,7 +200,6 @@ public class MavenPackageRepositoryTests {
                 PackageName.from("packC"), PackageVersion.from("0.1.0"));
         Assert.assertTrue(modules.isEmpty());
     }
-
 
     @Test(description = "Test package version existence in custom repository")
     public void testGetNonExistingPackageVersions2() {

@@ -107,16 +107,20 @@ public class DefaultPackageResolver implements PackageResolver {
             if (unresolvedRequests.isEmpty()) {
                 break;
             }
-            Collection<ImportModuleResponse> packageNames = repositoryEntry.getValue()
+            Collection<ImportModuleResponse> importModuleResponses = repositoryEntry.getValue()
                     .getPackageNames(requests, options);
-            for (ImportModuleResponse packageName : packageNames) {
+            for (ImportModuleResponse response : importModuleResponses) {
+                if (response.resolutionStatus().equals(ResolutionStatus.UNRESOLVED)) {
+                    responseListInCustomRepos.add(new ImportModuleResponse(response.importModuleRequest()));
+                    continue;
+                }
                 PackageDescriptor packageDescriptor = PackageDescriptor.from(
-                        packageName.packageDescriptor().org(),
-                        packageName.packageDescriptor().name(),
-                        packageName.packageDescriptor().version(),
+                        response.packageDescriptor().org(),
+                        response.packageDescriptor().name(),
+                        response.packageDescriptor().version(),
                         repositoryEntry.getKey());
                 responseListInCustomRepos.add(new ImportModuleResponse(
-                        packageDescriptor, packageName.importModuleRequest()));
+                        packageDescriptor, response.importModuleRequest()));
             }
 
             // Remove requests resolved from the custom repo before resolving from the dist and central repos
