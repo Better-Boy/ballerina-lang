@@ -25,14 +25,15 @@ import io.ballerina.cli.task.CreateExecutableTask;
 import io.ballerina.cli.task.CreateFingerprintTask;
 import io.ballerina.cli.task.DumpBuildTimeTask;
 import io.ballerina.cli.task.ResolveMavenDependenciesTask;
-import io.ballerina.cli.task.ResolveWorkspaceDependenciesTask;
 import io.ballerina.cli.task.RunBuildToolsTask;
 import io.ballerina.cli.utils.BuildTime;
 import io.ballerina.projects.BuildOptions;
 import io.ballerina.projects.DependencyGraph;
+import io.ballerina.projects.DiagnosticResult;
 import io.ballerina.projects.Project;
 import io.ballerina.projects.ProjectException;
 import io.ballerina.projects.ProjectKind;
+import io.ballerina.projects.ProjectLoadResult;
 import io.ballerina.projects.directory.BuildProject;
 import io.ballerina.projects.directory.ProjectLoader;
 import io.ballerina.projects.directory.WorkspaceProject;
@@ -49,10 +50,13 @@ import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static io.ballerina.cli.cmd.CommandUtil.resolveWorkspaceDependencies;
 import static io.ballerina.cli.cmd.Constants.BUILD_COMMAND;
 import static io.ballerina.projects.util.ProjectConstants.BUILD_FILE;
 import static io.ballerina.projects.util.ProjectUtils.readBuildJson;
@@ -232,6 +236,7 @@ public class BuildCommand implements BLauncherCmd {
     @Override
     public void execute() {
         long start = 0;
+        int exitCode = 0;
         if (this.helpFlag) {
             String commandUsageInfo = BLauncherCmd.getCommandUsageInfo(BUILD_COMMAND);
             this.errStream.println(commandUsageInfo);
@@ -242,6 +247,7 @@ public class BuildCommand implements BLauncherCmd {
         Project project;
         BuildOptions buildOptions = constructBuildOptions();
         Path absProjectPath = this.projectPath.toAbsolutePath().normalize();
+        DiagnosticResult wpDiagnosticResult;
         try {
             if (buildOptions.dumpBuildTime()) {
                 start = System.currentTimeMillis();
@@ -254,7 +260,12 @@ public class BuildCommand implements BLauncherCmd {
                         ". Please provide a valid Ballerina package, workspace or a standalone file.");
             }
 
-            project = ProjectLoader.load(projectPath, buildOptions).project();
+            ProjectLoadResult loadResult = ProjectLoader.load(projectPath, buildOptions);
+            wpDiagnosticResult = loadResult.diagnostics();
+            if (wpDiagnosticResult.hasErrors()) {
+                exitCode = 1;
+            }
+            project = loadResult.project();
             if (buildOptions.dumpBuildTime()) {
                 BuildTime.getInstance().projectLoadDuration = System.currentTimeMillis() - start;
             }
@@ -285,8 +296,10 @@ public class BuildCommand implements BLauncherCmd {
         }
 
         if (project.kind() == ProjectKind.WORKSPACE_PROJECT) {
+            wpDiagnosticResult.diagnostics().forEach(diagnostic -> this.errStream.println(diagnostic.toString()));
             WorkspaceProject workspaceProject = (WorkspaceProject) project;
-            DependencyGraph<BuildProject> projectDependencyGraph = resolveWorkspaceDependencies(workspaceProject);
+            DependencyGraph<BuildProject> projectDependencyGraph = resolveWorkspaceDependencies(
+                    workspaceProject, this.outStream);
             List<BuildProject> topologicallySortedList = new ArrayList<>(
                     projectDependencyGraph.toTopologicallySortedList());
             if (!workspaceProject.sourceRoot().equals(absProjectPath)) {
@@ -300,6 +313,7 @@ public class BuildCommand implements BLauncherCmd {
                 topologicallySortedList.removeIf(prj -> !projectDependencies.contains(prj)
                         && prj != buildProjectOptional.get());
             }
+            Map<BuildProject, Boolean> rebuildCache = new HashMap<>();
             for (BuildProject buildProject : topologicallySortedList) {
                 boolean skipExecutable = false;
                 if (workspaceProject.sourceRoot().equals(absProjectPath)) {
@@ -313,13 +327,26 @@ public class BuildCommand implements BLauncherCmd {
                         skipExecutable = true;
                     }
                 }
-                executeTasks(false, buildProject, skipExecutable);
+                boolean isRebuildNeeded = isRebuildNeeded(buildProject, skipExecutable);
+                rebuildCache.put(buildProject, isRebuildNeeded);
+                if (!isRebuildNeeded) {
+                    // Check if any of the dependencies need to be rebuilt.
+                    for (BuildProject dependency : projectDependencyGraph.getDirectDependencies(buildProject)) {
+                        isRebuildNeeded = rebuildCache.get(dependency);
+                        if (isRebuildNeeded) {
+                            rebuildCache.put(buildProject, true);
+                            break;
+                        }
+                    }
+                }
+                executeTasks(false, buildProject, skipExecutable, isRebuildNeeded);
             }
         } else {
-            executeTasks(project.kind().equals(ProjectKind.SINGLE_FILE_PROJECT), project, false);
+            executeTasks(project.kind().equals(ProjectKind.SINGLE_FILE_PROJECT), project, false,
+                    isRebuildNeeded(project, false));
         }
         if (this.exitWhenFinish) {
-            Runtime.getRuntime().exit(0);
+            Runtime.getRuntime().exit(exitCode);
         }
     }
 
@@ -327,35 +354,26 @@ public class BuildCommand implements BLauncherCmd {
         return !projectDependencyGraph.getDirectDependents(buildProject).isEmpty();
     }
 
-    private DependencyGraph<BuildProject> resolveWorkspaceDependencies(WorkspaceProject workspaceProject) {
-        TaskExecutor taskExecutor = new TaskExecutor.TaskBuilder()
-                .addTask(new ResolveWorkspaceDependenciesTask(outStream))
-                .build();
-        taskExecutor.executeTasks(workspaceProject);
-        return workspaceProject.getResolution().dependencyGraph();
-    }
-
-    private void executeTasks(boolean isSingleFile, Project project, boolean skipExecutable) {
+    private void executeTasks(boolean isSingleFile, Project project, boolean skipExecutable, boolean rebuildNeeded) {
         BuildOptions buildOptions = project.buildOptions();
-        boolean rebuildStatus = isRebuildNeeded(project, skipExecutable);
 
         List<Diagnostic> buildToolDiagnostics = new ArrayList<>();
         TaskExecutor taskExecutor = new TaskExecutor.TaskBuilder()
                 // clean the target directory(projects only)
-                .addTask(new CleanTargetDirTask(),  isSingleFile)
-                .addTask(new RestoreCachedArtifactsTask(), rebuildStatus)
+                .addTask(new CleanTargetDirTask(),  isSingleFile || !rebuildNeeded)
+                .addTask(new RestoreCachedArtifactsTask(), rebuildNeeded)
                 // Run build tools
-                .addTask(new RunBuildToolsTask(outStream, !rebuildStatus, buildToolDiagnostics), isSingleFile)
+                .addTask(new RunBuildToolsTask(outStream, !rebuildNeeded, buildToolDiagnostics), isSingleFile)
                 // resolve maven dependencies in Ballerina.toml
-                .addTask(new ResolveMavenDependenciesTask(outStream, !rebuildStatus))
+                .addTask(new ResolveMavenDependenciesTask(outStream, !rebuildNeeded))
                 // compile the modules
                 .addTask(new CompileTask(outStream, errStream, false, true,
-                        !rebuildStatus, buildToolDiagnostics))
+                        !rebuildNeeded, buildToolDiagnostics))
                 .addTask(new CreateExecutableTask(outStream, this.output, null, false,
-                         !rebuildStatus, skipExecutable))
+                         !rebuildNeeded, skipExecutable))
                 .addTask(new DumpBuildTimeTask(outStream), !buildOptions.dumpBuildTime())
-                .addTask(new CacheArtifactsTask(BUILD_COMMAND, skipExecutable), !rebuildStatus || isSingleFile)
-                .addTask(new CreateFingerprintTask(false, skipExecutable), !rebuildStatus || isSingleFile)
+                .addTask(new CacheArtifactsTask(BUILD_COMMAND, skipExecutable), !rebuildNeeded || isSingleFile)
+                .addTask(new CreateFingerprintTask(false, skipExecutable), !rebuildNeeded || isSingleFile)
                 .build();
 
         taskExecutor.executeTasks(project);

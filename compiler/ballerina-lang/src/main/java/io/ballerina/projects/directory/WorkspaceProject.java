@@ -122,8 +122,10 @@ public class WorkspaceProject extends Project {
 
     @Override
     public void clearCaches() {
-        for (Project project : this.projectList) {
-            project.clearCaches();
+        Environment environment = EnvironmentBuilder.getBuilder().setWorkspace(this).build();
+        for (BuildProject buildProject : this.projectList) {
+            buildProject.setEnvironment(environment);
+            buildProject.clearCaches();
         }
         this.workspaceResolution = null;
     }
@@ -139,8 +141,13 @@ public class WorkspaceProject extends Project {
         for (Project project : this.projectList) {
             projects.add((BuildProject) project.duplicate());
         }
-        return new WorkspaceProject(this.sourceRoot, this.buildOptions,
+        WorkspaceProject duplicateWp = new WorkspaceProject(this.sourceRoot, this.buildOptions,
                 this.workspaceBallerinaToml.tomlDocument(), projects);
+        Environment environment = EnvironmentBuilder.getBuilder().setWorkspace(duplicateWp).build();
+        for (BuildProject buildProject : projects) {
+            buildProject.setEnvironment(environment);
+        }
+        return duplicateWp;
     }
 
     @Override

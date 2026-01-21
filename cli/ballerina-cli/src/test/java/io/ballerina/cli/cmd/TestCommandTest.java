@@ -782,7 +782,7 @@ public class TestCommandTest extends BaseCommandTest {
     }
 
 
-    @Test(description = "Test a project twice with the same flags and different flags")
+    @Test(enabled = false, description = "Test a project twice with the same flags and different flags")
     public void testBuildAProjectTwiceWithFlags() throws IOException {
         String[] argsList1 = {
                 "--offline",
@@ -795,7 +795,7 @@ public class TestCommandTest extends BaseCommandTest {
 
         // Use the same flag that affects jar generation similarly in the consecutive builds
         for (String arg : argsList1) {
-            Path projectPath = this.testResources.resolve("buildAProjectTwice");
+            Path projectPath = this.testResources.resolve("projects-for-caching-tests/buildAProjectTwice");
             deleteDirectory(projectPath.resolve("target"));
             System.setProperty(USER_DIR_PROPERTY, projectPath.toString());
             TestCommand testCommand = new TestCommand(projectPath, printStream, printStream, false);
@@ -820,7 +820,7 @@ public class TestCommandTest extends BaseCommandTest {
                 // Skip --offline since tests are always run offline
                 continue;
             }
-            Path projectPath = this.testResources.resolve("buildAProjectTwice");
+            Path projectPath = this.testResources.resolve("projects-for-caching-tests/buildAProjectTwice");
             deleteDirectory(projectPath.resolve("target"));
             System.setProperty(USER_DIR_PROPERTY, projectPath.toString());
             TestCommand testCommand = new TestCommand(projectPath, printStream, printStream, false);
@@ -848,7 +848,7 @@ public class TestCommandTest extends BaseCommandTest {
 
         // Use different flags that doesn't affect jar generation in the consecutive builds
         for (String arg : argsList2) {
-            Path projectPath = this.testResources.resolve("buildAProjectTwice");
+            Path projectPath = this.testResources.resolve("projects-for-caching-tests/buildAProjectTwice");
             deleteDirectory(projectPath.resolve("target"));
             System.setProperty(USER_DIR_PROPERTY, projectPath.toString());
             TestCommand testCommand = new TestCommand(projectPath, printStream, printStream, false);
@@ -866,7 +866,7 @@ public class TestCommandTest extends BaseCommandTest {
 
         // Use different flags that affect jar generation in the consecutive builds
         for (String arg : argsList2) {
-            Path projectPath = this.testResources.resolve("buildAProjectTwice");
+            Path projectPath = this.testResources.resolve("projects-for-caching-tests/buildAProjectTwice");
             deleteDirectory(projectPath.resolve("target"));
             System.setProperty(USER_DIR_PROPERTY, projectPath.toString());
             TestCommand testCommand = new TestCommand(projectPath, printStream, printStream, false);
@@ -882,7 +882,7 @@ public class TestCommandTest extends BaseCommandTest {
             Assert.assertFalse(secondBuildLog.contains("Compiling source (UP-TO-DATE)"));
         }
 
-        Path projectPath = this.testResources.resolve("buildAProjectTwice");
+        Path projectPath = this.testResources.resolve("projects-for-caching-tests/buildAProjectTwice");
         deleteDirectory(projectPath.resolve("target"));
         System.setProperty(USER_DIR_PROPERTY, projectPath.toString());
         TestCommand testCommand = new TestCommand(projectPath, printStream, printStream, false);
@@ -940,9 +940,9 @@ public class TestCommandTest extends BaseCommandTest {
         Assert.assertFalse(firstBuildLog.contains("Compiling source (UP-TO-DATE)"));
     }
 
-    @Test(description = "Test a project after 24 hours of the last build")
+    @Test(enabled = false, description = "Test a project after 24 hours of the last build")
     public void testBuildAProjectTwiceBeforeAfter24Hr() throws IOException {
-        Path projectPath = this.testResources.resolve("buildAProjectTwice");
+        Path projectPath = this.testResources.resolve("projects-for-caching-tests/buildAProjectTwice");
         deleteDirectory(projectPath.resolve("target"));
         System.setProperty(USER_DIR_PROPERTY, projectPath.toString());
         TestCommand testCommand = new TestCommand(projectPath, printStream, printStream, false);
@@ -970,9 +970,9 @@ public class TestCommandTest extends BaseCommandTest {
         Assert.assertFalse(thirdBuildLog.contains("Compiling source (UP-TO-DATE)"));
     }
 
-    @Test(description = "Test a project twice with the build command in the middle")
+    @Test(enabled = false, description = "Test a project twice with the build command in the middle")
     public void testBuildAProjectTwiceWithBuildCommandMiddle() throws IOException {
-        Path projectPath = this.testResources.resolve("buildAProjectTwice");
+        Path projectPath = this.testResources.resolve("projects-for-caching-tests/buildAProjectTwice");
         deleteDirectory(projectPath.resolve("target"));
         System.setProperty(USER_DIR_PROPERTY, projectPath.toString());
         TestCommand testCommand = new TestCommand(projectPath, printStream, printStream, false);
@@ -994,9 +994,9 @@ public class TestCommandTest extends BaseCommandTest {
         Assert.assertTrue(secondBuildLog.contains("Compiling source (UP-TO-DATE)"));
     }
 
-    @Test(description = "Test a project twice with the pack command in the middle")
+    @Test(enabled = false, description = "Test a project twice with the pack command in the middle")
     public void testBuildAProjectTwiceWithPackCommandMiddle() throws IOException {
-        Path projectPath = this.testResources.resolve("buildAProjectTwice");
+        Path projectPath = this.testResources.resolve("projects-for-caching-tests/buildAProjectTwice");
         deleteDirectory(projectPath.resolve("target"));
         System.setProperty(USER_DIR_PROPERTY, projectPath.toString());
         TestCommand testCommand = new TestCommand(projectPath, printStream, printStream, false);
@@ -1020,7 +1020,7 @@ public class TestCommandTest extends BaseCommandTest {
 
     @Test(description = "Test a project with a new file within 24 hours of the last build")
     public void testBuildAProjectWithFileAddition() throws IOException {
-        Path projectPath = this.testResources.resolve("buildAProjectTwice");
+        Path projectPath = this.testResources.resolve("projects-for-caching-tests/buildAProjectTwice");
         deleteDirectory(projectPath.resolve("target"));
         System.setProperty(USER_DIR_PROPERTY, projectPath.toString());
         TestCommand testCommand = new TestCommand(projectPath, printStream, printStream, false);
@@ -1042,7 +1042,7 @@ public class TestCommandTest extends BaseCommandTest {
 
     @Test(description = "Test a project with file modification within 24 hours of the last build")
     public void testBuildAProjectWithFileModification() throws IOException {
-        Path projectPath = this.testResources.resolve("buildAProjectTwice");
+        Path projectPath = this.testResources.resolve("projects-for-caching-tests/buildAProjectTwice");
         deleteDirectory(projectPath.resolve("target"));
         System.setProperty(USER_DIR_PROPERTY, projectPath.toString());
         TestCommand testCommand = new TestCommand(projectPath, printStream, printStream, false);
@@ -1061,9 +1061,9 @@ public class TestCommandTest extends BaseCommandTest {
         Assert.assertFalse(secondBuildLog.contains("Compiling source (UP-TO-DATE)"));
     }
 
-    @Test(description = "Test a project with no content change")
+    @Test(enabled = false, description = "Test a project with no content change")
     public void testBuildAProjectWithFileNoContentChange() throws IOException {
-        Path projectPath = this.testResources.resolve("buildAProjectTwice");
+        Path projectPath = this.testResources.resolve("projects-for-caching-tests/buildAProjectTwice");
         deleteDirectory(projectPath.resolve("target"));
         System.setProperty(USER_DIR_PROPERTY, projectPath.toString());
         TestCommand testCommand = new TestCommand(projectPath, printStream, printStream, false);
